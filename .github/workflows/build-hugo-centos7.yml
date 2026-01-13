@@ -6,38 +6,44 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: centos:7
 
     steps:
-      - name: Fix CentOS7 repo to vault
-        run: |
-          sed -i \
-            -e 's|^mirrorlist=|#mirrorlist=|g' \
-            -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
-            /etc/yum.repos.d/CentOS-Base.repo
-          yum clean all
-          yum makecache
+      - name: Checkout (optional)
+        uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Build hugo inside CentOS7 container
         run: |
-          yum -y install gcc gcc-c++ git make wget
+          docker run --rm \
+            -v $PWD:/work \
+            -w /work \
+            centos:7 \
+            bash -c "
+              sed -i \
+                -e 's|^mirrorlist=|#mirrorlist=|g' \
+                -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+                /etc/yum.repos.d/CentOS-Base.repo && \
+              yum clean all && yum makecache && \
+              yum -y install gcc gcc-c++ git make wget && \
 
-      - name: Install Go
-        run: |
-          wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz
-          tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz
-          echo "/usr/local/go/bin" >> $GITHUB_PATH
+              wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz && \
+              tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz && \
+              export PATH=/usr/local/go/bin:\$PATH && \
+              export CGO_ENABLED=1 && \
 
-      - name: Build Hugo Extended
+              git clone https://github.com/gohugoio/hugo.git && \
+              cd hugo && \
+              git checkout v0.148.0 && \
+              go build -tags extended && \
+              cp hugo /work/hugo
+            "
+
+      - name: Check binary
         run: |
-          git clone https://github.com/gohugoio/hugo.git
-          cd hugo
-          git checkout v0.148.0
-          CGO_ENABLED=1 go build -tags extended
+          file hugo
+          ./hugo version || true
 
       - name: Upload hugo binary
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: hugo-centos7-extended
-          path: hugo/hugo
+          path: hugo
