@@ -1,0 +1,43 @@
+name: Build Hugo Extended for CentOS7
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: centos:7
+
+    steps:
+      - name: Fix CentOS7 repo to vault
+        run: |
+          sed -i \
+            -e 's|^mirrorlist=|#mirrorlist=|g' \
+            -e 's|^#baseurl=http://mirror.centos.org|baseurl=http://vault.centos.org|g' \
+            /etc/yum.repos.d/CentOS-Base.repo
+          yum clean all
+          yum makecache
+
+      - name: Install build dependencies
+        run: |
+          yum -y install gcc gcc-c++ git make wget
+
+      - name: Install Go
+        run: |
+          wget https://go.dev/dl/go1.22.2.linux-amd64.tar.gz
+          tar -C /usr/local -xzf go1.22.2.linux-amd64.tar.gz
+          echo "/usr/local/go/bin" >> $GITHUB_PATH
+
+      - name: Build Hugo Extended
+        run: |
+          git clone https://github.com/gohugoio/hugo.git
+          cd hugo
+          git checkout v0.148.0
+          CGO_ENABLED=1 go build -tags extended
+
+      - name: Upload hugo binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: hugo-centos7-extended
+          path: hugo/hugo
