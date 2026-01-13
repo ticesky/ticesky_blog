@@ -37,7 +37,7 @@ jobs:
           CGO_ENABLED=1 go build -tags extended
 
       - name: Upload hugo binary
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v3
         with:
           name: hugo-centos7-extended
           path: hugo/hugo
