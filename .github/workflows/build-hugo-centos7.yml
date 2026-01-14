@@ -34,16 +34,16 @@ jobs:
               cd hugo && \
               git checkout v0.148.0 && \
               go build -tags extended && \
-              cp hugo /work/hugo
+              cp hugo /work/hugo-centos7
             "
 
       - name: Check binary
         run: |
-          file hugo
-          ./hugo version || true
+          file hugo-centos7
+          ./hugo-centos7 version || true
 
       - name: Upload hugo binary
         uses: actions/upload-artifact@v4
         with:
           name: hugo-centos7-extended
-          path: hugo
+          path: hugo-centos7
